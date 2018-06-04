@@ -1,0 +1,586 @@
+<!-- Google LLC. initially published the source code
+in two Github repositories
+ 
+ https://github.com/tensorflow/tfjs-models/tree/master/posenet
+ https://github.com/tensorflow/tfjs-examples/tree/master/webcam-transfer-learning
+
+and licensed the code under the Apache License, Version 2.0.
+ 
+MONTREAL.AI modified the code to make it suitable for a new use.
+The modifications to the code are the differences between
+the original code above-referenced and the code herein.
+Thank You to the TensorFlow.js team and contributors. -->
+
+<!--
+Copyright 2018 MONTREAL.AI. All Rights Reserved.
+
+Licensed under the Apache License, Version 2.0 (the "License");
+you may not use this file except in compliance with the License.
+You may obtain a copy of the License at
+
+http://www.apache.org/licenses/LICENSE-2.0
+
+Unless required by applicable law or agreed to in writing, software
+distributed under the License is distributed on an "AS IS" BASIS,
+WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+See the License for the specific language governing permissions and
+limitations under the License.
+==============================================================================
+-->
+<html>
+<head>
+  <meta http-equiv="Content-Type" content="text/html; charset=utf-8"/>
+  <title>Sign2Text</title>
+  <link rel="stylesheet" href="https://fonts.googleapis.com/icon?family=Material+Icons">
+  <link rel="stylesheet" href="https://code.getmdl.io/1.3.0/material.cyan-teal.min.css" />
+  <link href="https://fonts.googleapis.com/css?family=Roboto:300,400,500" rel="stylesheet">
+  <script defer src="https://code.getmdl.io/1.3.0/material.min.js"></script>
+  <link rel="stylesheet" href="./styles.css">
+</head>
+<body>
+  <header>
+      <b>Sign Language to Text </b>(<i>A to Z</i>) with <b>Artificial Intelligence</b> <font size=4><i>(Pre-Alpha Demo)</i></font>.
+  </header>
+  <div id="no-webcam">
+      No webcam found. <br/>
+      To use this demo, use a device with a webcam.
+  </div>
+  <!-- Top -->
+  <div id="pacman-container">
+    <p id="copyright2"><b>Transfer Learning</b> to Predict <i><b>Sign to Text</b></i> from a Webcam. <b>For Humans.</b></p>
+    <p id="copyright3"><br>(Click on the <i><b>'A' Sample</b></i> to add the current camera view as an example for that control.)</p>
+    <center><img width="96" height="66" src="./images/pointer.svg" /></center>
+  </div>
+
+  <div id="status">Loading mobilenet...</div>
+
+  <div class="controller-panels" id="controller" style="display:none">
+
+    <div class="panel training-panel">
+
+      <!-- Big buttons. -->
+      <div class="panel-row big-buttons">
+        <button id="train">
+          <img width="66" height="66" src="./images/ai66.jpg" />
+          <span id="train-status">TRAIN MODEL</span>
+        </button>
+        <button id="predict">
+          <img width="66" height="66" src="./images/nn66.jpg" />
+          <span>PREDICT</span>
+        </button>
+      </div><!-- /.panel-row -->
+
+      <div class="panel-row params-webcam-row">
+
+        <!-- Hyper params. -->
+        <div class="hyper-params">
+
+          <!-- Learning rate -->
+          <div class="dropdown">
+            <label>Learning rate</label>
+            <div class="select">
+              <select id="learningRate">
+                <option value="0.00001">0.00001</option>
+                <option selected value="0.0001">0.0001</option>
+                <option value="0.01">0.001</option>
+                <option value="0.03">0.003</option>
+              </select>
+            </div>
+          </div>
+
+          <!-- Batch size -->
+          <div class="dropdown">
+            <label>Batch size</label>
+            <div class="select">
+              <select id="batchSizeFraction">
+                <option value="0.05">0.05</option>
+                <option value="0.1">0.1</option>
+                <option selected value="0.4">0.4</option>
+                <option value="1">1</option>
+              </select>
+            </div>
+          </div>
+
+          <!-- Epochs -->
+          <div class="dropdown">
+            <label>Epochs</label>
+            <div class="select">
+              <select id="epochs">
+                <option value="10">10</option>
+                <option selected value="20">20</option>
+                <option value="40">40</option>
+              </select>
+            </div>
+          </div>
+
+          <!-- Hidden units -->
+          <div class="dropdown">
+            <label>Hidden units</label>
+            <div class="select">
+              <select id="dense-units">
+                <option value="10">10</option>
+                <option selected value="100">100</option>
+                <option value="200">200</option>
+              </select>
+            </div>
+          </div>
+
+        </div><!-- /.hyper-params -->
+
+        <div class="webcam-box-outer">
+          <div class="webcam-box-inner">
+            <video autoplay playsinline muted id="webcam" width="224" height="224"></video>
+          </div>
+        </div>
+
+      </div><!-- /.panel-row -->
+      <br>
+      <center><p id="copyright2">Sign : <b><big><span id="log"></span></big></b></p></center>
+      <br>
+      <div class="webcam-box-outer">
+        <div class="webcam-box-inner-posenet">
+
+          <div id="info" style='display:none'>
+          </div>
+          <div id="loading">
+              Loading the model...
+          </div>
+
+          <div id='main' style='display:none'>
+              <video id="video" playsinline style=" -moz-transform: scaleX(-1);
+              -o-transform: scaleX(-1);
+              -webkit-transform: scaleX(-1);
+              transform: scaleX(-1);
+              display: none;
+              ">
+              </video>
+              <canvas id="output" />
+          </div>
+
+        </div>
+      </div>
+
+    </div><!-- /.panel -->
+
+    <div class="panel joystick-panel">
+
+      <div class="panel-row panel-a-b-c-d-e">
+        
+        <div class="panel-cell alphaa">
+          <div class="thumb-box">
+            <div class="thumb-box-outer">
+              <div class="thumb-box-inner">
+                <canvas class="thumb" width=224 height=224 id="a-thumb"></canvas>
+              </div>
+              <button class="record-button" id="a"/><span>'A' Sample</span></button>
+            </div>
+            <p>
+              <span id="a-total">0</span> <i><b>A</b></i> examples
+            </p>
+          </div>
+        </div><!-- ./panel-cell -->
+        
+        <div class="panel-cell alphab">
+          <div class="thumb-box">
+            <div class="thumb-box-outer">
+              <div class="thumb-box-inner">
+                <canvas class="thumb" width=224 height=224 id="b-thumb"></canvas>
+              </div>
+              <button class="record-button" id="b"/><span>'B' Sample</span></button>
+            </div>
+            <p>
+              <span id="b-total">0</span> <i><b>B</b></i> examples
+            </p>
+          </div>
+        </div><!-- ./panel-cell -->
+        
+        <div class="panel-cell alphac">
+          <div class="thumb-box">
+            <div class="thumb-box-outer">
+              <div class="thumb-box-inner">
+                <canvas class="thumb" width=224 height=224 id="c-thumb"></canvas>
+              </div>
+              <button class="record-button" id="c"/><span>'C' Sample</span></button>
+            </div>
+            <p>
+              <span id="c-total">0</span> <i><b>C</b></i> examples
+            </p>
+          </div>
+        </div><!-- ./panel-cell -->
+        
+        <div class="panel-cell alphad">
+          <div class="thumb-box">
+            <div class="thumb-box-outer">
+              <div class="thumb-box-inner">
+                <canvas class="thumb" width=224 height=224 id="d-thumb"></canvas>
+              </div>
+              <button class="record-button" id="d"/><span>'D' Sample</span></button>
+            </div>
+            <p>
+              <span id="d-total">0</span> <i><b>D</b></i> examples
+            </p>
+          </div>
+        </div><!-- ./panel-cell -->
+        
+        <div class="panel-cell alphae">
+          <div class="thumb-box">
+            <div class="thumb-box-outer">
+              <div class="thumb-box-inner">
+                <canvas class="thumb" width=224 height=224 id="e-thumb"></canvas>
+              </div>
+              <button class="record-button" id="e"/><span>'E' Sample</span></button>
+            </div>
+            <p>
+              <span id="e-total">0</span> <i><b>E</b></i> examples
+            </p>
+          </div>
+        </div><!-- ./panel-cell -->
+
+      </div><!-- /.panel-row -->
+      <div class="panel-row panel-f-g-h-i-j">
+
+        <div class="panel-cell alphaf">
+          <div class="thumb-box">
+            <div class="thumb-box-outer">
+              <div class="thumb-box-inner">
+                <canvas class="thumb" width=224 height=224 id="f-thumb"></canvas>
+              </div>
+              <button class="record-button" id="f"/><span>'F' Sample</span></button>
+            </div>
+            <p>
+              <span id="f-total">0</span> <i><b>F</b></i> examples
+            </p>
+          </div>
+        </div><!-- ./panel-cell -->
+        
+        <div class="panel-cell alphag">
+          <div class="thumb-box">
+            <div class="thumb-box-outer">
+              <div class="thumb-box-inner">
+                <canvas class="thumb" width=224 height=224 id="g-thumb"></canvas>
+              </div>
+              <button class="record-button" id="g"/><span>'G' Sample</span></button>
+            </div>
+            <p>
+              <span id="g-total">0</span> <i><b>G</b></i> examples
+            </p>
+          </div>
+        </div><!-- ./panel-cell -->
+        
+        <div class="panel-cell alphah">
+          <div class="thumb-box">
+            <div class="thumb-box-outer">
+              <div class="thumb-box-inner">
+                <canvas class="thumb" width=224 height=224 id="h-thumb"></canvas>
+              </div>
+              <button class="record-button" id="h"/><span>'H' Sample</span></button>
+            </div>
+            <p>
+              <span id="h-total">0</span> <i><b>H</b></i> examples
+            </p>
+          </div>
+        </div><!-- ./panel-cell -->
+        
+        <div class="panel-cell alphai">
+          <div class="thumb-box">
+            <div class="thumb-box-outer">
+              <div class="thumb-box-inner">
+                <canvas class="thumb" width=224 height=224 id="i-thumb"></canvas>
+              </div>
+              <button class="record-button" id="i"/><span>'I' Sample</span></button>
+            </div>
+            <p>
+              <span id="i-total">0</span> <i><b>I</b></i> examples
+            </p>
+          </div>
+        </div><!-- ./panel-cell -->
+
+        <div class="panel-cell alphaj">
+          <div class="thumb-box">
+            <div class="thumb-box-outer">
+              <div class="thumb-box-inner">
+                <canvas class="thumb" width=224 height=224 id="j-thumb"></canvas>
+              </div>
+              <button class="record-button" id="j"/><span>'J' Sample</span></button>
+            </div>
+            <p>
+              <span id="j-total">0</span> <i><b>J</b></i> examples
+            </p>
+          </div>
+        </div><!-- ./panel-cell -->
+
+      </div><!-- /.panel-row -->
+      <div class="panel-row panel-k-l-m-n-o">
+
+        <div class="panel-cell alphak">
+          <div class="thumb-box">
+            <div class="thumb-box-outer">
+              <div class="thumb-box-inner">
+                <canvas class="thumb" width=224 height=224 id="k-thumb"></canvas>
+              </div>
+              <button class="record-button" id="k"/><span>'K' Sample</span></button>
+            </div>
+            <p>
+              <span id="k-total">0</span> <i><b>K</b></i> examples
+            </p>
+          </div>
+        </div><!-- ./panel-cell -->
+
+        <div class="panel-cell alphal">
+          <div class="thumb-box">
+            <div class="thumb-box-outer">
+              <div class="thumb-box-inner">
+                <canvas class="thumb" width=224 height=224 id="l-thumb"></canvas>
+              </div>
+              <button class="record-button" id="l"/><span>'L' Sample</span></button>
+            </div>
+            <p>
+              <span id="l-total">0</span> <i><b>L</b></i> examples
+            </p>
+          </div>
+        </div><!-- ./panel-cell -->
+
+        <div class="panel-cell alpham">
+          <div class="thumb-box">
+            <div class="thumb-box-outer">
+              <div class="thumb-box-inner">
+                <canvas class="thumb" width=224 height=224 id="m-thumb"></canvas>
+              </div>
+              <button class="record-button" id="m"/><span>'M' Sample</span></button>
+            </div>
+            <p>
+              <span id="m-total">0</span> <i><b>M</b></i> examples
+            </p>
+          </div>
+        </div><!-- ./panel-cell -->
+
+        <div class="panel-cell alphan">
+          <div class="thumb-box">
+            <div class="thumb-box-outer">
+              <div class="thumb-box-inner">
+                <canvas class="thumb" width=224 height=224 id="n-thumb"></canvas>
+              </div>
+              <button class="record-button" id="n"/><span>'N' Sample</span></button>
+            </div>
+            <p>
+              <span id="n-total">0</span> <i><b>N</b></i> examples
+            </p>
+          </div>
+        </div><!-- ./panel-cell -->
+
+        <div class="panel-cell alphao">
+          <div class="thumb-box">
+            <div class="thumb-box-outer">
+              <div class="thumb-box-inner">
+                <canvas class="thumb" width=224 height=224 id="o-thumb"></canvas>
+              </div>
+              <button class="record-button" id="o"/><span>'O' Sample</span></button>
+            </div>
+            <p>
+              <span id="o-total">0</span> <i><b>O</b></i> examples
+            </p>
+          </div>
+        </div><!-- ./panel-cell -->
+
+      </div><!-- /.panel-row -->
+      <div class="panel-row panel-p-q-r-s-t">
+
+        <div class="panel-cell alphap">
+          <div class="thumb-box">
+            <div class="thumb-box-outer">
+              <div class="thumb-box-inner">
+                <canvas class="thumb" width=224 height=224 id="p-thumb"></canvas>
+              </div>
+              <button class="record-button" id="p"/><span>'P' Sample</span></button>
+            </div>
+            <p>
+              <span id="p-total">0</span> <i><b>P</b></i> examples
+            </p>
+          </div>
+        </div><!-- ./panel-cell -->
+
+        <div class="panel-cell alphaq">
+          <div class="thumb-box">
+            <div class="thumb-box-outer">
+              <div class="thumb-box-inner">
+                <canvas class="thumb" width=224 height=224 id="q-thumb"></canvas>
+              </div>
+              <button class="record-button" id="q"/><span>'Q' Sample</span></button>
+            </div>
+            <p>
+              <span id="q-total">0</span> <i><b>Q</b></i> examples
+            </p>
+          </div>
+        </div><!-- ./panel-cell -->
+
+        <div class="panel-cell alphar">
+          <div class="thumb-box">
+            <div class="thumb-box-outer">
+              <div class="thumb-box-inner">
+                <canvas class="thumb" width=224 height=224 id="r-thumb"></canvas>
+              </div>
+              <button class="record-button" id="r"/><span>'R' Sample</span></button>
+            </div>
+            <p>
+              <span id="r-total">0</span> <i><b>R</b></i> examples
+            </p>
+          </div>
+        </div><!-- ./panel-cell -->
+
+        <div class="panel-cell alphas">
+          <div class="thumb-box">
+            <div class="thumb-box-outer">
+              <div class="thumb-box-inner">
+                <canvas class="thumb" width=224 height=224 id="s-thumb"></canvas>
+              </div>
+              <button class="record-button" id="s"/><span>'S' Sample</span></button>
+            </div>
+            <p>
+              <span id="s-total">0</span> <i><b>S</b></i> examples
+            </p>
+          </div>
+        </div><!-- ./panel-cell -->
+
+        <div class="panel-cell alphat">
+          <div class="thumb-box">
+            <div class="thumb-box-outer">
+              <div class="thumb-box-inner">
+                <canvas class="thumb" width=224 height=224 id="t-thumb"></canvas>
+              </div>
+              <button class="record-button" id="t"/><span>'T' Sample</span></button>
+            </div>
+            <p>
+              <span id="t-total">0</span> <i><b>T</b></i> examples
+            </p>
+          </div>
+        </div><!-- ./panel-cell -->
+
+      </div><!-- /.panel-row -->
+      <div class="panel-row panel-u-v-w-x-y">
+
+        <div class="panel-cell alphau">
+          <div class="thumb-box">
+            <div class="thumb-box-outer">
+              <div class="thumb-box-inner">
+                <canvas class="thumb" width=224 height=224 id="u-thumb"></canvas>
+              </div>
+              <button class="record-button" id="u"/><span>'U' Sample</span></button>
+            </div>
+            <p>
+              <span id="u-total">0</span> <i><b>U</b></i> examples
+            </p>
+          </div>
+        </div><!-- ./panel-cell -->
+
+        <div class="panel-cell alphav">
+          <div class="thumb-box">
+            <div class="thumb-box-outer">
+              <div class="thumb-box-inner">
+                <canvas class="thumb" width=224 height=224 id="v-thumb"></canvas>
+              </div>
+              <button class="record-button" id="v"/><span>'V' Sample</span></button>
+            </div>
+            <p>
+              <span id="v-total">0</span> <i><b>V</b></i> examples
+            </p>
+          </div>
+        </div><!-- ./panel-cell -->
+
+        <div class="panel-cell alphaw">
+          <div class="thumb-box">
+            <div class="thumb-box-outer">
+              <div class="thumb-box-inner">
+                <canvas class="thumb" width=224 height=224 id="w-thumb"></canvas>
+              </div>
+              <button class="record-button" id="w"/><span>'W' Sample</span></button>
+            </div>
+            <p>
+              <span id="w-total">0</span> <i><b>W</b></i> examples
+            </p>
+          </div>
+        </div><!-- ./panel-cell -->
+
+        <div class="panel-cell alphax">
+          <div class="thumb-box">
+            <div class="thumb-box-outer">
+              <div class="thumb-box-inner">
+                <canvas class="thumb" width=224 height=224 id="x-thumb"></canvas>
+              </div>
+              <button class="record-button" id="x"/><span>'X' Sample</span></button>
+            </div>
+            <p>
+              <span id="x-total">0</span> <i><b>X</b></i> examples
+            </p>
+          </div>
+        </div><!-- ./panel-cell -->
+
+        <div class="panel-cell alphay">
+          <div class="thumb-box">
+            <div class="thumb-box-outer">
+              <div class="thumb-box-inner">
+                <canvas class="thumb" width=224 height=224 id="y-thumb"></canvas>
+              </div>
+              <button class="record-button" id="y"/><span>'Y' Sample</span></button>
+            </div>
+            <p>
+              <span id="y-total">0</span> <i><b>Y</b></i> examples
+            </p>
+          </div>
+        </div><!-- ./panel-cell -->
+
+      </div><!-- /.panel-row -->
+      <div class="panel-row panel-z">
+
+        <div class="panel-cell alphaz">
+          <div class="thumb-box">
+            <div class="thumb-box-outer">
+              <div class="thumb-box-inner">
+                <canvas class="thumb" width=224 height=224 id="z-thumb"></canvas>
+              </div>
+              <button class="record-button" id="z"/><span>'Z' Sample</span></button>
+            </div>
+            <p>
+              <span id="z-total">0</span> <i><b>Z</b></i> examples
+            </p>
+          </div>
+        </div><!-- ./panel-cell -->
+
+        <div class="panel-cell panel-cell-right panel-cell-fill">
+        </div><!-- ./panel-cell -->
+
+      </div><!-- /.panel-row -->
+
+
+    </div><!-- /.panel -->
+
+  </div><!-- /#controller -->
+
+  <p id="copyright"><br>
+  This pre-alpha demo version supports the 26 letters of the English alphabet. We use a pretrained <a href="https://github.com/tensorflow/tfjs-examples/tree/master/mobilenet" target="_blank" rel="noopener">MobileNet</a> model and train another model<br> using an internal mobilenet activation to predict 26 different classes. Thank you <a href="https://js.tensorflow.org/" target="_blank" rel="noopener">TensorFlow.js</a> for your flexible and intuitive APIs.<br><br>
+  <img width="640" height="178" src="./images/aslaz.jpg" /><br><br>
+  A Pure JavaScript Implementation Built On Top Of :
+    <a href="https://github.com/tensorflow/tfjs-models/tree/master/posenet" target="_blank" rel="noopener">PoseNet</a> And
+    <a href="https://github.com/tensorflow/tfjs-examples/tree/master/webcam-transfer-learning" target="_blank" rel="noopener">Transfer Learning Via Webcam</a>.<br>
+  An <b>#AI4Good</b> Deep Learning Application By :
+    <a href="https://twitter.com/Montreal_AI" target="_blank" rel="noopener">@Montreal_AI</a>
+  </p>
+
+  <!-- <script src="https://storage.googleapis.com/tfjs-examples/assets/webcam-transfer-learning/pacman-google.js"></script> -->
+  
+  <!-- <script src="https://cdn.jsdelivr.net/npm/@tensorflow/tfjs@0.10.0"> </script> -->
+  <script src="https://cdn.jsdelivr.net/npm/dat.gui@0.7.2/build/dat.gui.js"></script>
+  <script src="https://cdn.jsdelivr.net/npm/@tensorflow/tfjs@0.10.3"> </script>
+  <script src="https://unpkg.com/@tensorflow-models/posenet"></script>
+
+  <script src="ui.js"></script>
+  <script src="webcam.js"></script>
+
+  <script src="controller_dataset.js"></script>
+  <script src="index.js"></script>
+  
+  <script src="demo_util.js"></script>
+  <script src="stats.min.js"></script>
+  <script src="camera.js"></script>
+  
+</body>
+</html>
