@@ -48,7 +48,11 @@ limitations under the License.
   <!-- Top -->
   <div id="pacman-container">
     <p id="copyright2"><b>Transfer Learning</b> to Predict <i><b>Sign to Text</b></i> from a Webcam. <b>For Humans.</b></p>
-    <p id="copyright3"><br>(Click on the <i><b>'A' Sample</b></i> to add the current camera view as an example for that control.)</p>
+    <p id="copyright3"><br>For each letter, you must reproduce the sign appearing on the sign alphabet (below) and long press on the corresponding box (on the right) so that it is recorded at different locations of the selected box. You must do it again for all the letters.<br>
+
+    <br>Then you have to press Train Model and finally Predict to make it work.<br>
+     
+    <br>(Click on the <i><b>'A' Sample</b></i> to add the current camera view as an example for that control.)</p>
     <center><img width="96" height="66" src="./images/pointer.svg" /></center>
   </div>
 
@@ -555,7 +559,7 @@ limitations under the License.
 
   </div><!-- /#controller -->
 
-  <p id="copyright"><br>At Montreal.AI, we believe that artificial intelligence must be ethical, humanistic and elaborate to reduce social inequalities. We are delighted to present this sign language translated into text. If you have ideas for #AI4Good projects, please let us know.<br><br>
+  <p id="copyright"><br>At Montreal.AI, we believe that artificial intelligence must be ethical, humanistic and elaborate to reduce social inequalities.<br>We are delighted to present this sign language translated into text. If you have ideas for #AI4Good projects, please let us know.<br><br>
   This pre-alpha demo version supports the 26 letters of the English alphabet. We use a pretrained <a href="https://github.com/tensorflow/tfjs-examples/tree/master/mobilenet" target="_blank" rel="noopener">MobileNet</a> model and train another model<br> using an internal mobilenet activation to predict 26 different classes. Thank you <a href="https://js.tensorflow.org/" target="_blank" rel="noopener">TensorFlow.js</a> for your flexible and intuitive APIs.<br><br>
   <img width="640" height="178" src="./images/aslaz.jpg" /><br><br>
   A Pure JavaScript Implementation Built On Top Of :
